@@ -1,0 +1,10 @@
+site_name: 'Vault Secure KV Store Layer'
+
+generate:
+  - vault-kv.md:
+    - charms.layer.vault_kv+
+
+pages:
+  - Vault Secure KV Store Layer: vault-kv.md
+
+gens_dir: docs
