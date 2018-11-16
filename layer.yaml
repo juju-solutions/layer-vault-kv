@@ -1,0 +1,3 @@
+repo: https://github.com/juju-solutions/layer-vault-kv
+includes:
+  - 'interface:vault-kv'
