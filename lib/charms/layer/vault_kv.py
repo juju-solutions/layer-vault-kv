@@ -85,6 +85,11 @@ class VaultAppKV(_VaultBaseKV):
     for a more KV-like interface. When values are set, via either style, they
     are immediately persisted to Vault. Values are also cached in memory.
 
+    Note: This is intended to be used as a secure replacement for leadership
+    data.  Therefore, only the leader should set data here.  This is not
+    enforced, but data changed by non-leaders will not trigger hooks on other
+    units, so they may not be notified of changes in a timely fashion.
+
     Note: This class is a singleton.
     """
     def __init__(self):
@@ -129,13 +134,24 @@ class VaultAppKV(_VaultBaseKV):
 
     def is_changed(self, key):
         """
-        Determine if the value for the given key has changed since the last
-        time `self.update_hashes()` has been called.
+        Determine if the value for the given key has changed.
 
         In order to detect changes, hashes of the values are also stored
-        in Vault.
+        in Vault.  These hashes are updated automatically at exit via
+        `self.update_hashes()`.
         """
         return self._new_hashes.get(key) == self._old_hashes.get(key)
+
+    def any_changed(self):
+        """
+        Determine if any data has changed.
+
+        In order to detect changes, hashes of the values are also stored
+        in Vault.  These hashes are updated automatically at exit via
+        `self.update_hashes()`.
+        """
+        all_keys = self._new_hashes.keys() | self._old_hashes.keys()
+        return any(self.is_changed(key) for key in all_keys)
 
     def update_hashes(self):
         """

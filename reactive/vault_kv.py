@@ -1,4 +1,4 @@
-from charmhelpers.core import hookenv
+from charmhelpers.core import hookenv, host
 from charms.reactive import when_all, when_not, set_flag, clear_flag
 from charms.reactive import endpoint_from_flag
 from charms.reactive import data_changed
@@ -46,6 +46,9 @@ def manage_app_kv_flags():
 def update_app_kv_hashes():
     try:
         app_kv = vault_kv.VaultAppKV()
+        if hookenv.is_leader() and app_kv.any_changed():
+            # force hooks to run on non-leader units
+            hookenv.leader_set({'vault-kv-nonce': host.pwgen(8)})
         app_kv.update_hashes()
     except vault_kv.VaultNotReady:
         return
