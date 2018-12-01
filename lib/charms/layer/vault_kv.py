@@ -6,7 +6,7 @@ from charmhelpers.core import unitdata
 from charmhelpers.contrib.openstack.vaultlocker import retrieve_secret_id
 from charms.reactive import data_changed
 from charms.reactive import endpoint_from_flag
-from charms.reactive import set_flag, clear_flag
+from charms.reactive import set_flag, clear_flag, get_flags
 
 import hvac
 
@@ -132,6 +132,12 @@ class VaultAppKV(_VaultBaseKV):
         else:
             clear_flag(flag_key_set)
 
+    @classmethod
+    def _clear_all_flags(cls):
+        for flag in get_flags():
+            if flag.startswith('layer.vault-kv.app-kv.'):
+                clear_flag(flag)
+
     def is_changed(self, key):
         """
         Determine if the value for the given key has changed.
@@ -190,7 +196,8 @@ def get_vault_config():
     [UnitData]: https://charm-helpers.readthedocs.io/en/latest/api/charmhelpers.core.unitdata.html
     """  # noqa
     vault = endpoint_from_flag('vault-kv.available')
-    if not vault:
+    if not (vault and vault.vault_url and vault.unit_role_id and
+            vault.unit_token):
         raise VaultNotReady()
     return {
         'vault_url': vault.vault_url,

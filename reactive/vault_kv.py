@@ -18,14 +18,23 @@ def request_vault_access():
 
 @when_all('vault-kv.available')
 def set_ready():
-    set_flag('layer.vault-kv.ready')
+    try:
+        vault_kv.get_vault_config()
+    except vault_kv.VaultNotReady:
+        clear_flag('layer.vault-kv.ready')
+    else:
+        set_flag('layer.vault-kv.ready')
 
 
 @when_all('layer.vault-kv.ready')
 def check_config_changed():
-    config = vault_kv.get_vault_config()
-    if data_changed('layer.vault-kv.config', config):
-        set_flag('layer.vault-kv.config.changed')
+    try:
+        config = vault_kv.get_vault_config()
+    except vault_kv.VaultNotReady:
+        return
+    else:
+        if data_changed('layer.vault-kv.config', config):
+            set_flag('layer.vault-kv.config.changed')
 
 
 @when_not('vault-kv.connected')
@@ -40,7 +49,7 @@ def manage_app_kv_flags():
         for key in app_kv.keys():
             app_kv._manage_flags(key)
     except vault_kv.VaultNotReady:
-        return
+        vault_kv.VaultAppKV._clear_all_flags()
 
 
 def update_app_kv_hashes():
