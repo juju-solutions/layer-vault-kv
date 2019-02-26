@@ -146,7 +146,7 @@ class VaultAppKV(_VaultBaseKV):
         in Vault.  These hashes are updated automatically at exit via
         `self.update_hashes()`.
         """
-        return self._new_hashes.get(key) == self._old_hashes.get(key)
+        return self._new_hashes.get(key) != self._old_hashes.get(key)
 
     def any_changed(self):
         """
