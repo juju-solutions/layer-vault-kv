@@ -11,6 +11,11 @@ from charms.reactive import set_flag, clear_flag, get_flags
 import hvac
 
 
+def log(msg, *args, **kwargs):
+    hookenv.log('vault-kv.log: {}'.format(msg.format(*args, **kwargs)),
+                level=hookenv.DEBUG)
+
+
 class VaultNotReady(Exception):
     """
     Exception indicating that Vault was accessed before it was ready.
@@ -27,16 +32,27 @@ class _Singleton(type):
 
 
 class _VaultBaseKV(dict, metaclass=_Singleton):
-    _client = None  # shared client
     _path = None  # set by subclasses
 
     def __init__(self):
-        if not self._client:
-            _VaultBaseKV._client = hvac.Client(url=self._config['vault_url'])
-            _VaultBaseKV._client.auth_approle(self._config['role_id'],
-                                              self._config['secret_id'])
         response = self._client.read(self._path)
-        super().__init__(response['data'] if response else {})
+        data = response['data'] if response else {}
+        super().__init__(data)
+
+    @property
+    def _client(self):
+        """
+        Get an authenticated hvac.Client.
+
+        The authentication token for the client is only valid for 60 seconds,
+        after which a new client will need to be authenticated.
+        """
+        log('Logging {cls} in to {vault_url}',
+            cls=type(self).__name__,
+            vault_url=self._config['vault_url'])
+        client = hvac.Client(url=self._config['vault_url'])
+        client.auth_approle(self._config['role_id'], self._config['secret_id'])
+        return client
 
     @property
     def _config(self):
@@ -44,6 +60,7 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
         return _VaultBaseKV._config
 
     def __setitem__(self, key, value):
+        log('Writing data to vault')
         self._client.write(self._path, **{key: value})
         super().__setitem__(key, value)
 
@@ -101,6 +118,7 @@ class VaultAppKV(_VaultBaseKV):
         self._load_hashes()
 
     def _load_hashes(self):
+        log('Reading hashes from {}', self._hash_path)
         response = self._client.read(self._hash_path)
         self._old_hashes = response['data'] if response else {}
         self._new_hashes = {}
@@ -165,6 +183,7 @@ class VaultAppKV(_VaultBaseKV):
 
         This is done automatically at exit.
         """
+        log('Writing hashes to {}', self._hash_path)
         self._client.write(self._hash_path, **self._new_hashes)
         self._old_hashes.clear()
         self._old_hashes.update(self._new_hashes)
@@ -199,12 +218,13 @@ def get_vault_config():
     if not (vault and vault.vault_url and vault.unit_role_id and
             vault.unit_token):
         raise VaultNotReady()
-    return {
+    vault_config = {
         'vault_url': vault.vault_url,
         'secret_backend': _get_secret_backend(),
         'role_id': vault.unit_role_id,
         'secret_id': _get_secret_id(vault),
     }
+    return vault_config
 
 
 def _get_secret_backend():
@@ -215,6 +235,7 @@ def _get_secret_backend():
 def _get_secret_id(vault):
     token = vault.unit_token
     if data_changed('layer.vault-kv.token', token):
+        log('Changed unit_token, getting new secret_id')
         # token is one-shot, but if it changes it might mean that we're
         # being told to rotate the secret ID, or we might not have fetched
         # one yet
