@@ -10,9 +10,9 @@ from charms.layer import vault_kv
 @when_not('layer.vault-kv.requested')
 def request_vault_access():
     vault = endpoint_from_flag('vault-kv.connected')
+    backend_name = vault_kv._get_secret_backend()
     # backend can't be isolated or VaultAppKV won't work; see issue #2
-    vault.request_secret_backend(vault_kv._get_secret_backend(),
-                                 isolated=False)
+    vault.request_secret_backend(backend_name, isolated=False)
     set_flag('layer.vault-kv.requested')
 
 
