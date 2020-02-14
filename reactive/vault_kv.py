@@ -58,7 +58,7 @@ def update_app_kv_hashes():
         if hookenv.is_leader() and app_kv.any_changed():
             # force hooks to run on non-leader units
             hookenv.leader_set({'vault-kv-nonce': host.pwgen(8)})
-        app_kv.update_hashes()
+            app_kv.update_hashes()
     except vault_kv.VaultNotReady:
         return
 
