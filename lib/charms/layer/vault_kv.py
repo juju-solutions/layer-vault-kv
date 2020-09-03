@@ -8,6 +8,7 @@ from charms.reactive import data_changed
 from charms.reactive import endpoint_from_flag
 from charms.reactive import set_flag, clear_flag, get_flags
 
+import requests
 import hvac
 
 
@@ -47,12 +48,19 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
         The authentication token for the client is only valid for 60 seconds,
         after which a new client will need to be authenticated.
         """
-        log('Logging {cls} in to {vault_url}',
-            cls=type(self).__name__,
-            vault_url=self._config['vault_url'])
-        client = hvac.Client(url=self._config['vault_url'])
-        client.auth_approle(self._config['role_id'], self._config['secret_id'])
-        return client
+        try:
+            log('Logging {cls} in to {vault_url}',
+                cls=type(self).__name__,
+                vault_url=self._config['vault_url'])
+            client = hvac.Client(url=self._config['vault_url'])
+            client.auth_approle(self._config['role_id'],
+                                self._config['secret_id'])
+            return client
+        except (requests.exceptions.ConnectionError,
+                hvac.exceptions.VaultDown,
+                hvac.exceptions.VaultNotInitialized,
+                hvac.exceptions.BadGateway) as e:
+            raise VaultNotReady() from e
 
     @property
     def _config(self):
