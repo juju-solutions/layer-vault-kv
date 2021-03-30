@@ -248,7 +248,13 @@ def _get_secret_id(vault):
         # being told to rotate the secret ID, or we might not have fetched
         # one yet
         vault_url = vault.vault_url
-        secret_id = retrieve_secret_id(vault_url, token)
+        try:
+            secret_id = retrieve_secret_id(vault_url, token)
+        except (requests.exceptions.ConnectionError,
+                hvac.exceptions.VaultDown,
+                hvac.exceptions.VaultNotInitialized,
+                hvac.exceptions.BadGateway) as e:
+            raise VaultNotReady() from e
         unitdata.kv().set('layer.vault-kv.secret_id', secret_id)
         # have to flush immediately because if we don't and hit some error
         # elsewhere, it could get us into a state where we have forgotten the
