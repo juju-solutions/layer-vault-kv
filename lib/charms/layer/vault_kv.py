@@ -223,8 +223,7 @@ def get_vault_config():
     [UnitData]: https://charm-helpers.readthedocs.io/en/latest/api/charmhelpers.core.unitdata.html
     """  # noqa
     vault = endpoint_from_flag('vault-kv.available')
-    if not (vault and vault.vault_url and vault.unit_role_id and
-            vault.unit_token):
+    if not (vault and vault.vault_url and vault.unit_role_id and vault.unit_token):
         raise VaultNotReady()
     vault_config = {
         'vault_url': vault.vault_url,
