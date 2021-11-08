@@ -6,41 +6,39 @@ from charms.reactive import data_changed
 from charms.layer import vault_kv
 
 
-register_trigger(when_not='vault-kv.connected',
-                 clear_flag='layer.vault-kv.ready')
-register_trigger(when_not='vault-kv.connected',
-                 clear_flag='layer.vault-kv.requested')
+register_trigger(when_not="vault-kv.connected", clear_flag="layer.vault-kv.ready")
+register_trigger(when_not="vault-kv.connected", clear_flag="layer.vault-kv.requested")
 
 
-@when_all('vault-kv.connected')
-@when_not('layer.vault-kv.requested')
+@when_all("vault-kv.connected")
+@when_not("layer.vault-kv.requested")
 def request_vault_access():
-    vault = endpoint_from_flag('vault-kv.connected')
+    vault = endpoint_from_flag("vault-kv.connected")
     backend_name = vault_kv._get_secret_backend()
     # backend can't be isolated or VaultAppKV won't work; see issue #2
     vault.request_secret_backend(backend_name, isolated=False)
-    set_flag('layer.vault-kv.requested')
+    set_flag("layer.vault-kv.requested")
 
 
-@when_all('vault-kv.available')
+@when_all("vault-kv.available")
 def set_ready():
     try:
         vault_kv.get_vault_config()
     except vault_kv.VaultNotReady:
-        clear_flag('layer.vault-kv.ready')
+        clear_flag("layer.vault-kv.ready")
     else:
-        set_flag('layer.vault-kv.ready')
+        set_flag("layer.vault-kv.ready")
 
 
-@when_all('layer.vault-kv.ready')
+@when_all("layer.vault-kv.ready")
 def check_config_changed():
     try:
         config = vault_kv.get_vault_config()
     except vault_kv.VaultNotReady:
         return
     else:
-        if data_changed('layer.vault-kv.config', config):
-            set_flag('layer.vault-kv.config.changed')
+        if data_changed("layer.vault-kv.config", config):
+            set_flag("layer.vault-kv.config.changed")
 
 
 def manage_app_kv_flags():
@@ -57,7 +55,7 @@ def update_app_kv_hashes():
         app_kv = vault_kv.VaultAppKV()
         if hookenv.is_leader():
             # force hooks to run on non-leader units
-            hookenv.leader_set({'vault-kv-nonce': host.pwgen(8)})
+            hookenv.leader_set({"vault-kv-nonce": host.pwgen(8)})
         if app_kv.any_changed():
             # Update the local unit hashes at successful exit
             app_kv.update_hashes()
