@@ -53,10 +53,10 @@ def manage_app_kv_flags():
 def update_app_kv_hashes():
     try:
         app_kv = vault_kv.VaultAppKV()
-        if hookenv.is_leader():
-            # force hooks to run on non-leader units
-            hookenv.leader_set({"vault-kv-nonce": host.pwgen(8)})
         if app_kv.any_changed():
+            if hookenv.is_leader():
+                # force hooks to run on non-leader units
+                hookenv.leader_set({"vault-kv-nonce": host.pwgen(8)})
             # Update the local unit hashes at successful exit
             app_kv.update_hashes()
     except vault_kv.VaultNotReady:
