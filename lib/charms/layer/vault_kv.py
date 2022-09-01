@@ -64,6 +64,7 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
             hvac.exceptions.VaultDown,
             hvac.exceptions.VaultNotInitialized,
             hvac.exceptions.BadGateway,
+            hvac.exceptions.InternalServerError,
         ) as e:
             raise VaultNotReady() from e
 
