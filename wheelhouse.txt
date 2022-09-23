@@ -2,3 +2,8 @@ hvac
 # needed to prevent apt installs during import
 netifaces
 psutil
+
+# hvac>1.0.0 and beyond
+# requires poetry-core for building its wheel.
+# it's not just included for fun
+poetry-core<=1.0.0
