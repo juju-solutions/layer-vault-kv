@@ -57,7 +57,7 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
                 vault_url=self._config["vault_url"],
             )
             client = hvac.Client(url=self._config["vault_url"])
-            client.auth_approle(self._config["role_id"], self._config["secret_id"])
+            client.auth.approle.login(self._config["role_id"], self._config["secret_id"])
             return client
         except (
             requests.exceptions.ConnectionError,
