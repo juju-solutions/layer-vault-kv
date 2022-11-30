@@ -261,6 +261,7 @@ def _get_secret_id(vault):
             hvac.exceptions.VaultDown,
             hvac.exceptions.VaultNotInitialized,
             hvac.exceptions.BadGateway,
+            hvac.exceptions.InternalServerError,
         ) as e:
             raise VaultNotReady() from e
         unitdata.kv().set("layer.vault-kv.secret_id", secret_id)
