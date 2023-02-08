@@ -58,7 +58,7 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
             )
             client = hvac.Client(url=self._config["vault_url"])
             client.auth.approle.login(
-                self._config["role_id"], self._config["secret_id"]
+                self._config["role_id"], secret_id=self._config["secret_id"]
             )
             return client
         except (
