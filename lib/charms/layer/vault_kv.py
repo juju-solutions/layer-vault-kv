@@ -4,7 +4,7 @@ from hashlib import md5
 from charmhelpers.core import hookenv
 from charmhelpers.core import unitdata
 from charmhelpers.contrib.openstack.vaultlocker import retrieve_secret_id
-from charms.reactive import data_changed
+from charms.reactive import data_changed, is_data_changed
 from charms.reactive import endpoint_from_flag
 from charms.reactive import set_flag, clear_flag, get_flags
 
@@ -250,7 +250,7 @@ def _get_secret_backend():
 
 def _get_secret_id(vault):
     token = vault.unit_token
-    if data_changed("layer.vault-kv.token", token):
+    if is_data_changed("layer.vault-kv.token", token):
         log("Changed unit_token, getting new secret_id")
         # token is one-shot, but if it changes it might mean that we're
         # being told to rotate the secret ID, or we might not have fetched
@@ -266,6 +266,11 @@ def _get_secret_id(vault):
             hvac.exceptions.InternalServerError,
         ) as e:
             raise VaultNotReady() from e
+
+        # update the token in the unitdata.kv now that its been
+        # successfully used to retrieve the secret_id
+        data_changed("layer.vault-kv.token", token)
+
         unitdata.kv().set("layer.vault-kv.secret_id", secret_id)
         # have to flush immediately because if we don't and hit some error
         # elsewhere, it could get us into a state where we have forgotten the
