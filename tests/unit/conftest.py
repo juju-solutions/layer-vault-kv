@@ -40,7 +40,7 @@ os.environ["JUJU_AVAILABILITY_ZONE"] = ""
 options = patch_module("charms.layer.options")
 options.get.return_value = "charm-{app}"
 
-from charms.layer.vault_kv import VaultAppKV, VaultUnitKV
+from charms.layer.vault_kv import VaultAppKV, VaultUnitKV  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

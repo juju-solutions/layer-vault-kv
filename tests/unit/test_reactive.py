@@ -3,7 +3,6 @@ from unittest.mock import patch, Mock
 import pytest
 
 from reactive.vault_kv import update_app_kv_hashes
-from charms.layer.vault_kv import VaultAppKV
 
 
 @pytest.fixture()

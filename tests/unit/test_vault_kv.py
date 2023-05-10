@@ -7,7 +7,6 @@ from charms.layer.vault_kv import (
     get_vault_config,
     VaultAppKV,
     VaultNotReady,
-    VaultUnitKV,
 )
 from charms.reactive import endpoint_from_flag, is_data_changed, data_changed
 from charmhelpers.core import unitdata, hookenv
@@ -93,11 +92,8 @@ def test_get_vault_config_fails_get_secret_id(mock_rtv_secret_id, vault):
 @mock.patch("charms.layer.vault_kv.retrieve_secret_id")
 def test_vault_app_kv_singleton(mock_rtv_secret_id, mock_client, backend_format):
     mock_client().read.return_value = dict(data={})
-    with mock.patch.object(
-        unitdata.kv.return_value, "flush", create=True
-    ) as mock_flush:
+    with mock.patch.object(unitdata.kv.return_value, "flush", create=True):
         mock_rtv_secret_id.return_value = "secret-from-token-value"
-
         kv = VaultAppKV(backend_format=backend_format)
         kv2 = VaultAppKV()
 

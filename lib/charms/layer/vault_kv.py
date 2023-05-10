@@ -1,7 +1,5 @@
 import json
-import yaml
 from functools import cached_property
-from pathlib import Path
 from hashlib import md5
 
 from charmhelpers.core import hookenv
