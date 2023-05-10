@@ -1,3 +1,16 @@
 repo: https://github.com/juju-solutions/layer-vault-kv
 includes:
+  - 'layer:options'
   - 'interface:vault-kv'
+defines:
+  secrets-backend-format:
+    type: string
+    default: "charm-{app}"
+    description: |-
+      VaultAppKV requests a secrets backend secret storage
+         from vault over the vault-kv interface
+         that secrets name can be formatted using the following substitutions
+      
+      variables
+      * model-uuid - juju model-uuid
+      * app        - juju application name
