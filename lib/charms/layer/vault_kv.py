@@ -41,9 +41,22 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
     _path = None  # set by subclasses
 
     def __init__(self):
-        response = self._client.read(self._path)
+        response = self._read_path(self._path)
         data = response["data"] if response else {}
         super().__init__(data)
+
+    def _read_path(self, path: str):
+        """
+        Get an kv path
+
+        Read from specified path, if the path doesn't exist yet
+        it will manifest as this token not being able to access
+        that path. Whatever the case, raise VaultNotReady()
+        """
+        try:
+            return self._client.read(self._path)
+        except hvac.exceptions.Forbidden as e:
+            raise VaultNotReady() from e
 
     @property
     def _client(self):
@@ -140,7 +153,7 @@ class VaultAppKV(_VaultBaseKV):
 
     def _load_hashes(self):
         log("Reading hashes from {}", self._hash_path)
-        response = self._client.read(self._hash_path)
+        response = self._read_path(self._hash_path)
         self._old_hashes = response["data"] if response else {}
         self._new_hashes = {}
         for key in self.keys():

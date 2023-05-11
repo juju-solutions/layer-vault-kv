@@ -12,5 +12,5 @@ defines:
          that secrets name can be formatted using the following substitutions
       
       variables
-      * model-uuid - juju model-uuid
-      * app        - juju application name
+      * model-uuid - juju model-uuid loaded from hookenv.model_uuid()
+      * app        - juju application-name loaded from hookenv.application_name()
