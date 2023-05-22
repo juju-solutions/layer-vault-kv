@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from charms.unit_test import patch_module, identity, MockKV, flags, MockEndpoint
 
@@ -34,3 +35,18 @@ os.environ["JUJU_MODEL_UUID"] = "test-1234"
 os.environ["JUJU_UNIT_NAME"] = "test/0"
 os.environ["JUJU_MACHINE_ID"] = "0"
 os.environ["JUJU_AVAILABILITY_ZONE"] = ""
+
+
+options = patch_module("charms.layer.options")
+options.get.return_value = "charm-{app}"
+
+from charms.layer.vault_kv import VaultAppKV, VaultUnitKV  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def destroy_vault_kv():
+    """Teardown singleton instance created in each unit test."""
+    yield
+    for cls in (VaultAppKV, VaultUnitKV):
+        if hasattr(cls, "_singleton_instance"):
+            del cls._singleton_instance

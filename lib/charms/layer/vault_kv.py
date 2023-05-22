@@ -1,9 +1,11 @@
 import json
+from functools import cached_property
 from hashlib import md5
 
 from charmhelpers.core import hookenv
 from charmhelpers.core import unitdata
 from charmhelpers.contrib.openstack.vaultlocker import retrieve_secret_id
+from charms.layer import options
 from charms.reactive import data_changed, is_data_changed
 from charms.reactive import endpoint_from_flag
 from charms.reactive import set_flag, clear_flag, get_flags
@@ -35,12 +37,26 @@ class _Singleton(type):
 
 
 class _VaultBaseKV(dict, metaclass=_Singleton):
+    _kwds = {}  # set by subclasses
     _path = None  # set by subclasses
 
     def __init__(self):
-        response = self._client.read(self._path)
+        response = self._read_path(self._path)
         data = response["data"] if response else {}
         super().__init__(data)
+
+    def _read_path(self, path: str):
+        """
+        Get an kv path
+
+        Read from specified path, if the path doesn't exist yet
+        it will manifest as this token not being able to access
+        that path. Whatever the case, raise VaultNotReady()
+        """
+        try:
+            return self._client.read(self._path)
+        except hvac.exceptions.Forbidden as e:
+            raise VaultNotReady() from e
 
     @property
     def _client(self):
@@ -70,10 +86,9 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
         ) as e:
             raise VaultNotReady() from e
 
-    @property
+    @cached_property
     def _config(self):
-        _VaultBaseKV._config = get_vault_config()
-        return _VaultBaseKV._config
+        return get_vault_config(**self._kwds)
 
     def __setitem__(self, key, value):
         log("Writing data to vault")
@@ -100,7 +115,8 @@ class VaultUnitKV(_VaultBaseKV):
     Note: This class is a singleton.
     """
 
-    def __init__(self):
+    def __init__(self, *_, **kwds):
+        self._kwds = kwds
         unit_num = hookenv.local_unit().split("/")[1]
         self._path = "{}/kv/unit/{}".format(self._config["secret_backend"], unit_num)
         super().__init__()
@@ -126,7 +142,8 @@ class VaultAppKV(_VaultBaseKV):
     Note: This class is a singleton.
     """
 
-    def __init__(self):
+    def __init__(self, *_, **kwds):
+        self._kwds = kwds
         self._path = "{}/kv/app".format(self._config["secret_backend"])
         self._hash_path = "{}/kv/app-hashes/{}".format(
             self._config["secret_backend"], hookenv.local_unit().split("/")[1]
@@ -136,7 +153,7 @@ class VaultAppKV(_VaultBaseKV):
 
     def _load_hashes(self):
         log("Reading hashes from {}", self._hash_path)
-        response = self._client.read(self._hash_path)
+        response = self._read_path(self._hash_path)
         self._old_hashes = response["data"] if response else {}
         self._new_hashes = {}
         for key in self.keys():
@@ -206,7 +223,7 @@ class VaultAppKV(_VaultBaseKV):
         self._old_hashes.update(self._new_hashes)
 
 
-def get_vault_config():
+def get_vault_config(**kwds):
     """
     Get the config data needed for this application to access Vault.
 
@@ -236,16 +253,24 @@ def get_vault_config():
         raise VaultNotReady()
     vault_config = {
         "vault_url": vault.vault_url,
-        "secret_backend": _get_secret_backend(),
+        "secret_backend": _get_secret_backend(**kwds),
         "role_id": vault.unit_role_id,
         "secret_id": _get_secret_id(vault),
     }
     return vault_config
 
 
-def _get_secret_backend():
-    app_name = hookenv.application_name()
-    return "charm-{}".format(app_name)
+def _get_secret_backend_format():
+    return options.get("vault-kv", "secrets-backend-format")
+
+
+def _get_secret_backend(backend_format: str = None, **_):
+    variables = {
+        "model-uuid": hookenv.model_uuid(),
+        "app": hookenv.application_name(),
+    }
+    fmt = backend_format if backend_format else _get_secret_backend_format()
+    return fmt.format(**variables)
 
 
 def _get_secret_id(vault):

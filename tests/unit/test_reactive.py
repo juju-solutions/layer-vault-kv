@@ -3,7 +3,6 @@ from unittest.mock import patch, Mock
 import pytest
 
 from reactive.vault_kv import update_app_kv_hashes
-from charms.layer.vault_kv import VaultAppKV
 
 
 @pytest.fixture()
@@ -20,19 +19,12 @@ def mock_vault_config():
         yield vc
 
 
-@pytest.fixture()
-def destroy_vault_kv():
-    """Teardown singleton instance created in each unit test."""
-    yield
-    del VaultAppKV._singleton_instance
-
-
 @patch("hvac.Client", autospec=True)
 @patch("charmhelpers.core.hookenv.local_unit", Mock(return_value="unit-test/0"))
 @patch("charmhelpers.core.hookenv.is_leader", Mock(return_value=True))
 @patch("charmhelpers.core.hookenv.leader_set")
 def test_update_app_kv_hashes_leader(
-    mock_leader_set, mock_hvac_client, mock_vault_config, destroy_vault_kv
+    mock_leader_set, mock_hvac_client, mock_vault_config
 ):
     def mock_read(path):
         if path == "charm-unit-test/kv/app":
@@ -68,7 +60,7 @@ def test_update_app_kv_hashes_leader(
 @patch("charmhelpers.core.hookenv.is_leader", Mock(return_value=False))
 @patch("charmhelpers.core.hookenv.leader_set")
 def test_update_app_kv_hashes_follower(
-    mock_leader_set, mock_hvac_client, mock_vault_config, destroy_vault_kv
+    mock_leader_set, mock_hvac_client, mock_vault_config
 ):
     def mock_read(path):
         if path == "charm-unit-test/kv/app":
