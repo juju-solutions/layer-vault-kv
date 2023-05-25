@@ -54,7 +54,7 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
         that path. Whatever the case, raise VaultNotReady()
         """
         try:
-            return self._client.read(self._path)
+            return self._client.read(path)
         except hvac.exceptions.Forbidden as e:
             raise VaultNotReady() from e
 
