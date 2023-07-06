@@ -1,3 +1,5 @@
+"""Library for vault_kv layer and available to the charm layer."""
+
 import json
 from functools import cached_property
 from hashlib import md5
@@ -5,6 +7,8 @@ from hashlib import md5
 from charmhelpers.core import hookenv
 from charmhelpers.core import unitdata
 from charmhelpers.contrib.openstack.vaultlocker import retrieve_secret_id
+
+# pylint: disable-next=no-name-in-module; this is imported via layer-options
 from charms.layer import options
 from charms.reactive import data_changed, is_data_changed
 from charms.reactive import endpoint_from_flag
@@ -15,17 +19,14 @@ import hvac
 
 
 def log(msg, *args, **kwargs):
-    hookenv.log(
-        "vault-kv.log: {}".format(msg.format(*args, **kwargs)), level=hookenv.DEBUG
-    )
+    """Simplified logger for this lib."""
+    hookenv.log(f"vault-kv.log: {msg.format(*args, **kwargs)}", level=hookenv.DEBUG)
 
 
 class VaultNotReady(Exception):
     """
     Exception indicating that Vault was accessed before it was ready.
     """
-
-    pass
 
 
 class _Singleton(type):
@@ -55,8 +56,8 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
         """
         try:
             return self._client.read(path)
-        except hvac.exceptions.Forbidden as e:
-            raise VaultNotReady() from e
+        except hvac.exceptions.Forbidden as ex:
+            raise VaultNotReady() from ex
 
     @property
     def _client(self):
@@ -83,8 +84,8 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
             hvac.exceptions.VaultNotInitialized,
             hvac.exceptions.BadGateway,
             hvac.exceptions.InternalServerError,
-        ) as e:
-            raise VaultNotReady() from e
+        ) as ex:
+            raise VaultNotReady() from ex
 
     @cached_property
     def _config(self):
@@ -96,7 +97,7 @@ class _VaultBaseKV(dict, metaclass=_Singleton):
         super().__setitem__(key, value)
 
     def set(self, key, value):
-        # alias in case a KV-like interface is preferred
+        """alias in case a KV-like interface is preferred."""
         self[key] = value
 
 
@@ -118,7 +119,7 @@ class VaultUnitKV(_VaultBaseKV):
     def __init__(self, *_, **kwds):
         self._kwds = kwds
         unit_num = hookenv.local_unit().split("/")[1]
-        self._path = "{}/kv/unit/{}".format(self._config["secret_backend"], unit_num)
+        self._path = f"{self._config['secret_backend']}/kv/unit/{unit_num}"
         super().__init__()
 
 
@@ -144,10 +145,12 @@ class VaultAppKV(_VaultBaseKV):
 
     def __init__(self, *_, **kwds):
         self._kwds = kwds
-        self._path = "{}/kv/app".format(self._config["secret_backend"])
-        self._hash_path = "{}/kv/app-hashes/{}".format(
-            self._config["secret_backend"], hookenv.local_unit().split("/")[1]
-        )
+        # self._kwds attrribute must be set first
+        # as _config attribute is based off its values
+        backend = self._config["secret_backend"]
+        unit_num = hookenv.local_unit().split("/")[1]
+        self._path = f"{backend}/kv/app"
+        self._hash_path = f"{backend}/kv/app-hashes/{unit_num}"
         super().__init__()
         self._load_hashes()
 
@@ -170,8 +173,8 @@ class VaultAppKV(_VaultBaseKV):
 
     def _manage_flags(self, key):
         flag_any_changed = "layer.vault-kv.app-kv.changed"
-        flag_key_changed = "layer.vault-kv.app-kv.changed.{}".format(key)
-        flag_key_set = "layer.vault-kv.app-kv.set.{}".format(key)
+        flag_key_changed = f"layer.vault-kv.app-kv.changed.{key}"
+        flag_key_set = f"layer.vault-kv.app-kv.set.{key}"
         if self.is_changed(key):
             # clear then set flag to ensure triggers are run even if the main
             # flag was never cleared
@@ -289,8 +292,8 @@ def _get_secret_id(vault):
             hvac.exceptions.VaultNotInitialized,
             hvac.exceptions.BadGateway,
             hvac.exceptions.InternalServerError,
-        ) as e:
-            raise VaultNotReady() from e
+        ) as ex:
+            raise VaultNotReady() from ex
 
         # update the token in the unitdata.kv now that its been
         # successfully used to retrieve the secret_id
