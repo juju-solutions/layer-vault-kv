@@ -148,9 +148,9 @@ class VaultAppKV(_VaultBaseKV):
         # self._kwds attrribute must be set first
         # as _config attribute is based off its values
         backend = self._config["secret_backend"]
-        app = hookenv.local_unit().split("/")[1]
+        unit_num = hookenv.local_unit().split("/")[1]
         self._path = f"{backend}/kv/app"
-        self._hash_path = f"{backend}/kv/app-hashes/{app}"
+        self._hash_path = f"{backend}/kv/app-hashes/{unit_num}"
         super().__init__()
         self._load_hashes()
 
